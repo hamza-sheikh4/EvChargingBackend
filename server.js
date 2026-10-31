@@ -40,6 +40,12 @@ async function main() {
 
   http.listen(config.app.port, () => {
     console.log('Server Running on port ' + config.app.port);
+    // Unanswered booking requests expire after 10 minutes.
+    require('./app/Jobs/ExpireRequests').start();
+    // Health page: 30-day cleanup, landing-site uptime, and a log line for every start.
+    require('./app/Jobs/Cleanup').start();
+    require('./app/Jobs/Uptime').start();
+    require('./app/Traits/SystemLog').event(`Server started (${process.env.NODE_ENV || 'development'})`);
   });
 
   http.on('error', onError);

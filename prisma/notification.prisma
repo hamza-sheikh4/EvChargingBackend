@@ -1,0 +1,15 @@
+/// The in-app feed (bell and Notifications screen), for drivers and hosts.
+/// kind matches the app's DriverNotificationKind / HostNotificationKind.
+model Notification {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      String /// "driver" or "host": the side of the app it shows on
+  kind      String
+  sessionId String?   @map("session_id") /// for session news; empty for account news such as verification
+  readAt    DateTime? @map("read_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@index([userId, role, createdAt])
+  @@map("notifications")
+}

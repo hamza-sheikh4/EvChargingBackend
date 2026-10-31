@@ -42,4 +42,16 @@ o.exists = async (key) => {
   }
 };
 
+/**
+ * For the Health page: makes a signed upload link, uploads a tiny file through it, and checks it
+ * arrived. Proves the keys, the bucket and signed links all work. Always the same key, so nothing piles up.
+ */
+o.probe = async () => {
+  const key = 'health/probe.jpg';
+  const response = await fetch(await o.uploadUrl(key), { method: 'PUT', headers: { 'Content-Type': CONTENT_TYPE }, body: new Uint8Array([0xff, 0xd8, 0xff, 0xd9]) });
+  if (!response.ok) throw new Error(`Upload through a signed link failed (HTTP ${response.status}).`);
+  if (!(await o.exists(key))) throw new Error('The uploaded file could not be found.');
+  return { bucket: storage.bucket };
+};
+
 module.exports = o;

@@ -6,9 +6,11 @@ const otp    = require('../../../Traits/Otp');
 const sms    = require('../../../Traits/Sms');
 const prisma = require('../../../../config/database');
 const auth   = require('../../../../config/auth');
+const systemLog = require('../../../Traits/SystemLog');
 
 const SECOND = 1000;
 const HOUR   = 60 * 60 * SECOND;
+const SUSPENDED = 'This account is suspended. Contact PakVolt support.';
 
 let o = {}
 
@@ -25,6 +27,7 @@ o.requestOtp = async (req, res, next) => {
       return json.errorResponse(res, 'Please wait a moment before asking for a new code.', 429);
     }
     if (recent.length >= auth.otpMaxPerHour) {
+      systemLog.security('Sign-in code limit hit (5 an hour per number)');
       return json.errorResponse(res, 'Too many codes requested. Try again in an hour.', 429);
     }
     const code = otp.generate();
@@ -58,6 +61,12 @@ o.verifyOtp = async (req, res, next) => {
     const claimed = await prisma.otpCode.updateMany({ where: { id: active.id, usedAt: null }, data: { usedAt: new Date() } });
     if (claimed.count === 0) return json.successResponse(res, { token: null });
 
+    const existing = await prisma.user.findUnique({ where: { phone } });
+    if (existing?.suspendedAt) {
+      systemLog.security('A suspended user tried to sign in');
+      return json.errorResponse(res, SUSPENDED, 403);
+    }
+
     const user = await prisma.user.upsert({
       where: { phone },
       create: { phone, lastLoginAt: new Date() },
@@ -83,8 +92,8 @@ o.authenticate = async (req, res, next) => {
       return json.errorResponse(res, 'Your login has expired. Please log in again.', 401);
     }
     const user = await prisma.user.findUnique({ where: { id: payload.sub } });
-    // A raised token_version logs the user out everywhere.
-    if (!user || user.tokenVersion !== payload.v) return json.errorResponse(res, 'Please log in again.', 401);
+    // A raised token_version logs the user out everywhere. Suspending raises it too; the check is a backstop.
+    if (!user || user.tokenVersion !== payload.v || user.suspendedAt) return json.errorResponse(res, 'Please log in again.', 401);
     req.user = user;
     next();
   } catch (e) {

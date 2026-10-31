@@ -5,28 +5,9 @@ let crypto  = require('../../../Traits/Crypto');
 let geo     = require('../../../Traits/Geo');
 let storage = require('../../../Traits/Storage');
 let prisma  = require('../../../../config/database');
+let present = require('./ListingPresenter');
 
 let o = {}
-
-/** The host's listing as the app reads it (ListingResponse). Never the CNIC or its photos. */
-const toResponse = (charger, user) => ({
-  fullName: user.fullName ?? '',
-  address: user.address ?? '',
-  location: charger.locationType,
-  areaId: charger.areaId,
-  coordinates: { latitude: charger.latitude, longitude: charger.longitude },
-  instructions: charger.instructions,
-  connectors: charger.connectors,
-  powerKw: charger.powerKw,
-  reportsEnergy: charger.reportsEnergy,
-  photoKeys: { charger: charger.chargerPhotoKey ?? undefined, connector: charger.connectorPhotoKey ?? undefined },
-  ratePaisa: charger.ratePaisa,
-  hours: charger.hours,
-  emergencyAvailability: charger.emergencyAvailability,
-  verifiedAt: charger.verifiedAt?.toISOString(),
-  listed: charger.listed,
-  lastCheckInAt: charger.lastCheckInAt?.toISOString(),
-});
 
 /** One charger per host for now. The table allows more later. */
 const findMine = (hostId) => prisma.charger.findFirst({ where: { hostId }, orderBy: { createdAt: 'asc' } });
@@ -39,12 +20,16 @@ const photosOk = async (userId, photos) => {
   return (await Promise.all(checks)).every(Boolean);
 };
 
-/** Submits the host's details and charger. The listing waits for verification. */
+/**
+ * Submits the host's details and charger. The listing waits for verification.
+ * After a rejection the host sends it again with fixes: the same charger is updated and goes back to pending.
+ */
 o.submit = async (req, res, next) => {
   try {
     const draft = req.body;
     const user = req.user;
-    if (await findMine(user.id)) return json.errorResponse(res, 'You already have a listing.', 409);
+    const existing = await findMine(user.id);
+    if (existing && user.hostVerificationStatus !== 'rejected') return json.errorResponse(res, 'You already have a listing.', 409);
 
     const ok = await photosOk(user.id, [
       [draft.identity.frontKey, 'cnic_front'],
@@ -70,29 +55,30 @@ o.submit = async (req, res, next) => {
           hostVerificationStatus: 'pending',
         },
       });
-      return tx.charger.create({
-        data: {
-          hostId: user.id,
-          locationType: draft.location,
-          areaId: draft.areaId,
-          latitude: draft.coordinates.latitude,
-          longitude: draft.coordinates.longitude,
-          approxLatitude: approx.latitude,
-          approxLongitude: approx.longitude,
-          instructions: draft.instructions ?? '',
-          connectors: draft.connectors,
-          powerKw: draft.powerKw,
-          reportsEnergy: draft.reportsEnergy,
-          chargerPhotoKey: draft.photoKeys.charger ?? null,
-          connectorPhotoKey: draft.photoKeys.connector ?? null,
-          ratePaisa: draft.ratePaisa,
-          hours: draft.hours,
-          emergencyAvailability: draft.emergencyAvailability,
-          lastCheckInAt: now,
-        },
-      });
+      const fields = {
+        locationType: draft.location,
+        areaId: draft.areaId,
+        latitude: draft.coordinates.latitude,
+        longitude: draft.coordinates.longitude,
+        approxLatitude: approx.latitude,
+        approxLongitude: approx.longitude,
+        instructions: draft.instructions ?? '',
+        connectors: draft.connectors,
+        powerKw: draft.powerKw,
+        reportsEnergy: draft.reportsEnergy,
+        chargerPhotoKey: draft.photoKeys.charger ?? null,
+        connectorPhotoKey: draft.photoKeys.connector ?? null,
+        ratePaisa: draft.ratePaisa,
+        hours: draft.hours,
+        emergencyAvailability: draft.emergencyAvailability,
+        lastCheckInAt: now,
+      };
+      return existing
+        ? tx.charger.update({ where: { id: existing.id }, data: { ...fields, verifiedAt: null } })
+        : tx.charger.create({ data: { hostId: user.id, ...fields } });
     });
-    json.successResponse(res, toResponse(charger, { ...user, address: draft.address, fullName: user.fullName || draft.fullName }), 201);
+    const host = { ...user, address: draft.address, fullName: user.fullName || draft.fullName };
+    json.successResponse(res, present.toResponse(charger, host, { status: 'pending' }), existing ? 200 : 201);
   } catch (e) {
     next(e);
   }
@@ -102,7 +88,7 @@ o.submit = async (req, res, next) => {
 o.mine = async (req, res, next) => {
   try {
     const charger = await findMine(req.user.id);
-    json.successResponse(res, charger ? toResponse(charger, req.user) : null);
+    json.successResponse(res, charger ? present.toResponse(charger, req.user, await present.reviewFor(req.user)) : null);
   } catch (e) {
     next(e);
   }
@@ -124,7 +110,7 @@ o.update = async (req, res, next) => {
       where: { id: charger.id },
       data: { ...rest, ...pin, ...(listed === undefined ? {} : { listed, lastCheckInAt: new Date() }) },
     });
-    json.successResponse(res, toResponse(updated, req.user));
+    json.successResponse(res, present.toResponse(updated, req.user, await present.reviewFor(req.user)));
   } catch (e) {
     next(e);
   }

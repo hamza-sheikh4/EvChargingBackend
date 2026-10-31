@@ -1,0 +1,50 @@
+/// The app's SessionState. Billing states are listed now so the order never changes later.
+enum SessionState {
+  requested
+  declined
+  expired
+  cancelled
+  accepted
+  active
+  interrupted
+  ended
+  awaiting_host_energy
+  billed
+  flagged
+  paid
+  disputed
+  reviewed
+  resolved
+}
+
+/// A booking: one driver charging at one host's charger (the app calls it a session).
+/// Billing (host energy, the bill, payment) comes later and adds its own columns.
+model Session {
+  id                 String       @id @default(uuid()) @db.Uuid
+  driverId           String       @map("driver_id") @db.Uuid
+  driver             User         @relation("DriverSessions", fields: [driverId], references: [id], onDelete: Cascade)
+  hostId             String       @map("host_id") @db.Uuid
+  host               User         @relation("HostSessions", fields: [hostId], references: [id], onDelete: Cascade)
+  chargerId          String       @map("charger_id") @db.Uuid
+  charger            Charger      @relation(fields: [chargerId], references: [id], onDelete: Cascade)
+  state              SessionState @default(requested)
+  /// Frozen when the driver asks, so later edits by the host do not change this booking.
+  ratePaisa          Int          @map("rate_paisa")
+  chargerSnapshot    Json         @map("charger_snapshot") /// hostName, areaId, location, connectors, maxKw, acceptedPayments
+  driverSnapshot     Json         @map("driver_snapshot") /// firstName and car: what the host sees
+  respondBy          DateTime     @map("respond_by")
+  startPercent       Int?         @map("start_percent")
+  endPercent         Int?         @map("end_percent")
+  interruptionReason String?      @map("interruption_reason")
+  /// Private storage keys for the driver's photos at the end: { chargerDisplay, carScreen }.
+  proofKeys          Json?        @map("proof_keys")
+  /// Every state change: { from, to, actor, at, note }.
+  events             Json
+  createdAt          DateTime     @default(now()) @map("created_at")
+  updatedAt          DateTime     @updatedAt @map("updated_at")
+
+  @@index([driverId, createdAt])
+  @@index([hostId, createdAt])
+  @@index([chargerId, state])
+  @@map("sessions")
+}

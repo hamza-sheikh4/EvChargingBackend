@@ -1,0 +1,81 @@
+/// superadmin has every permission and cannot be edited or removed. admin has the listed permissions.
+enum AdminRole {
+  superadmin
+  admin
+}
+
+/// suspended admins cannot sign in, and their current logins stop working.
+enum AdminStatus {
+  active
+  suspended
+}
+
+/// Grouped by panel page. Each group's *_view is needed for the rest of that group.
+enum AdminPermission {
+  hosts_view
+  hosts_view_documents
+  hosts_approve
+  hosts_reject
+  listings_view
+  listings_view_location
+  listings_pause
+  listings_relist
+  users_view
+  users_suspend
+  users_unsuspend
+  bookings_view
+  bookings_view_photos
+  team_view
+  team_add
+  team_edit
+  team_suspend
+  team_reset
+  team_remove
+  health_view
+  health_view_logs
+  health_resolve
+}
+
+/// Panel staff: the super admin and the team. Separate from users (the app's drivers and hosts).
+model Admin {
+  id                 String            @id @default(uuid()) @db.Uuid
+  email              String            @unique /// stored lowercase
+  fullName           String            @map("full_name")
+  role               AdminRole         @default(admin)
+  permissions        AdminPermission[] /// ignored for superadmin
+  status             AdminStatus       @default(active)
+  passwordHash       String            @map("password_hash")
+  failedLogins       Int               @default(0) @map("failed_logins")
+  lockedUntil        DateTime?         @map("locked_until")
+  tokenVersion       Int               @default(0) @map("token_version") /// +1 signs out everywhere
+  lastLoginAt        DateTime?         @map("last_login_at")
+  twoFactorSecret    String?           @map("two_factor_secret") /// encrypted; set during setup
+  twoFactorEnabledAt DateTime?         @map("two_factor_enabled_at") /// empty means 2FA is off
+  twoFactorLastStep  Int?              @map("two_factor_last_step") /// stops a code being used twice
+  createdById        String?           @map("created_by_id") @db.Uuid
+  createdBy          Admin?            @relation("AddedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  added              Admin[]           @relation("AddedBy")
+  actions            AdminAction[]
+  createdAt          DateTime          @default(now()) @map("created_at")
+  updatedAt          DateTime          @updatedAt @map("updated_at")
+
+  @@map("admins")
+}
+
+/// The audit log: who did what to which record. actorEmail keeps the name after an admin is removed.
+model AdminAction {
+  id         String   @id @default(uuid()) @db.Uuid
+  adminId    String?  @map("admin_id") @db.Uuid
+  admin      Admin?   @relation(fields: [adminId], references: [id], onDelete: SetNull)
+  actorEmail String   @map("actor_email")
+  action     String /// "auth.login", "team.add", "host.approve", ...
+  targetType String   @map("target_type") /// "admin", "user", "charger"
+  targetId   String   @map("target_id")
+  details    Json?
+  ip         String?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([targetType, targetId])
+  @@index([adminId, createdAt])
+  @@map("admin_actions")
+}

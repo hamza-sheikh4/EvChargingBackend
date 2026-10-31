@@ -1,6 +1,7 @@
 'use strict'
 
 let config = require('../../config/app');
+let systemLog = require('../Traits/SystemLog');
 
 /*
 |--------------------------------------------------------------------------
@@ -25,6 +26,10 @@ module.exports = function handler(app) {
   // eslint-disable-next-line no-unused-vars
   app.use(function errorHandler(err, req, res, next) {
     console.error(err.stack || err);
+    // Grouped in the Health page's error log; the route pattern, never the body.
+    if ((err.status || 500) >= 500) {
+      systemLog.error('api', err.message || 'Server error', err, { route: req.route ? `${req.method} ${req.baseUrl}${req.route.path}` : `${req.method} ${req.path}` });
+    }
     res.status(err.status || 500).json({
       error: config.env === 'development' ? (err.stack || String(err)) : 'Something failed!',
       code: String(err.status || 500)

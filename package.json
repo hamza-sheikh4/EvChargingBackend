@@ -13,7 +13,7 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
-    "verify-host": "node scripts/verify-host.js"
+    "super-admin": "node scripts/super-admin.js"
   },
   "license": "MIT",
   "dependencies": {

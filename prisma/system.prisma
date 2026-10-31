@@ -1,0 +1,62 @@
+/// error: something failed. crash: an app or page went down. bug_report: someone used "Report a problem".
+/// event: a system log line (server started, job ran). security: sign-in failures, lockouts, limit spikes.
+/// uptime: one landing-site check. ping: app opens, counted per day, version and platform.
+enum SystemEventKind {
+  error
+  crash
+  bug_report
+  event
+  security
+  uptime
+  ping
+}
+
+enum SystemEventSource {
+  api
+  job
+  mobile
+  admin
+  landing
+}
+
+enum SystemEventLevel {
+  info
+  warn
+  error
+}
+
+enum SystemEventStatus {
+  open
+  resolved
+}
+
+/// Everything the Health page shows that is not a live number. Repeats of the same thing share a
+/// fingerprint and count up instead of adding rows. Kept 30 days (open bug reports until closed).
+/// Messages are scrubbed of phones, emails, CNICs and tokens before they are saved.
+model SystemEvent {
+  id            String            @id @default(uuid()) @db.Uuid
+  kind          SystemEventKind
+  source        SystemEventSource
+  level         SystemEventLevel  @default(error)
+  fingerprint   String            @unique
+  title         String
+  message       String?
+  stack         String?
+  context       Json?
+  count         Int               @default(1)
+  firstSeenAt   DateTime          @default(now()) @map("first_seen_at")
+  lastSeenAt    DateTime          @default(now()) @map("last_seen_at")
+  status        SystemEventStatus @default(open)
+  resolvedAt    DateTime?         @map("resolved_at")
+  resolvedBy    String?           @map("resolved_by")
+  appVersion    String?           @map("app_version")
+  platform      String?
+  device        String?
+  /// Bug reports only: who sent it, so the team can follow up, and the screenshot's private key.
+  userId        String?           @map("user_id") @db.Uuid
+  screenshotKey String?           @map("screenshot_key")
+
+  @@index([kind, lastSeenAt])
+  @@index([source, kind])
+  @@map("system_events")
+}
