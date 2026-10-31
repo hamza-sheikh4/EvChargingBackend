@@ -1,0 +1,27 @@
+enum VehicleCategory {
+  car
+  bike
+}
+
+enum ConnectorType {
+  type2
+  ccs2
+  chademo
+  gbt
+}
+
+model Vehicle {
+  id           String          @id @default(uuid()) @db.Uuid
+  userId       String          @map("user_id") @db.Uuid
+  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category     VehicleCategory
+  manufacturer String?
+  model        String?
+  connectors   ConnectorType[]
+  usesAdapter  Boolean         @default(false) @map("uses_adapter")
+  createdAt    DateTime        @default(now()) @map("created_at")
+  updatedAt    DateTime        @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@map("vehicles")
+}

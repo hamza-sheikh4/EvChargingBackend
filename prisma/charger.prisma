@@ -1,0 +1,36 @@
+enum ChargerLocation {
+  home
+  business
+}
+
+model Charger {
+  id                    String          @id @default(uuid()) @db.Uuid
+  hostId                String          @map("host_id") @db.Uuid
+  host                  User            @relation(fields: [hostId], references: [id], onDelete: Cascade)
+  locationType          ChargerLocation @map("location_type")
+  areaId                String          @map("area_id")
+  /// The exact pin. Shared with a driver only after the host accepts (vision rule 2).
+  latitude              Float
+  longitude             Float
+  /// 50 to 100 m from the pin, fixed per pin. What drivers see before acceptance.
+  approxLatitude        Float           @map("approx_latitude")
+  approxLongitude       Float           @map("approx_longitude")
+  instructions          String          @default("")
+  connectors            ConnectorType[]
+  powerKw               Float           @map("power_kw")
+  reportsEnergy         Boolean         @map("reports_energy")
+  chargerPhotoKey       String?         @map("charger_photo_key")
+  connectorPhotoKey     String?         @map("connector_photo_key")
+  ratePaisa             Int             @map("rate_paisa")
+  /// Weekly hours as the app sends them: { mon: { open, opensAt, closesAt }, ... }.
+  hours                 Json
+  emergencyAvailability Boolean         @default(false) @map("emergency_availability")
+  listed                Boolean         @default(true)
+  lastCheckInAt         DateTime?       @map("last_check_in_at")
+  verifiedAt            DateTime?       @map("verified_at")
+  createdAt             DateTime        @default(now()) @map("created_at")
+  updatedAt             DateTime        @updatedAt @map("updated_at")
+
+  @@index([hostId])
+  @@map("chargers")
+}

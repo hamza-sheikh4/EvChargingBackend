@@ -1,0 +1,31 @@
+enum HostVerificationStatus {
+  pending
+  verified
+  rejected
+}
+
+model User {
+  id                     String                  @id @default(uuid()) @db.Uuid
+  phone                  String                  @unique
+  fullName               String?                 @map("full_name")
+  email                  String?
+  photoKey               String?                 @map("photo_key")
+  isDriver               Boolean                 @default(false) @map("is_driver")
+  isHost                 Boolean                 @default(false) @map("is_host")
+  driverOnboardedAt      DateTime?               @map("driver_onboarded_at")
+  hostOnboardedAt        DateTime?               @map("host_onboarded_at")
+  cnicEncrypted          String?                 @map("cnic_encrypted")
+  address                String?
+  cnicFrontKey           String?                 @map("cnic_front_key")
+  cnicBackKey            String?                 @map("cnic_back_key")
+  hostVerificationStatus HostVerificationStatus? @map("host_verification_status")
+  isAdmin                Boolean                 @default(false) @map("is_admin")
+  tokenVersion           Int                     @default(0) @map("token_version")
+  lastLoginAt            DateTime?               @map("last_login_at")
+  createdAt              DateTime                @default(now()) @map("created_at")
+  updatedAt              DateTime                @updatedAt @map("updated_at")
+  vehicles               Vehicle[]
+  chargers               Charger[]
+
+  @@map("users")
+}
