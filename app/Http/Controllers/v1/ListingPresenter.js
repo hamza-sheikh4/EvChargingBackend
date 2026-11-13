@@ -1,6 +1,7 @@
 'use strict'
 
 let prisma = require('../../../../config/database');
+let fresh  = require('../../../Traits/Freshness');
 
 /*
 |--------------------------------------------------------------------------
@@ -50,6 +51,9 @@ o.toResponse = (charger, user, review) => ({
   verifiedAt: charger.verifiedAt?.toISOString(),
   listed: charger.listed,
   lastCheckInAt: charger.lastCheckInAt?.toISOString(),
+  /** Hidden from drivers until the host checks in. */
+  stale: fresh.isStale(charger),
+  awayUntil: fresh.isAway(charger) ? charger.awayUntil.toISOString() : undefined,
   review,
 });
 

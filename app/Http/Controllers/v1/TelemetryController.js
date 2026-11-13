@@ -70,7 +70,7 @@ o.ping = async (req, res, next) => {
 o.bugReport = async (req, res, next) => {
   try {
     const b = req.body;
-    if (b.screenshotKey && !(storage.ownsKey(b.screenshotKey, 'bug_screenshot', req.user.id) && (await storage.exists(b.screenshotKey)))) {
+    if (b.screenshotKey && !(storage.ownsKey(b.screenshotKey, 'bug_screenshot', req.user.id) && (await storage.uploaded(b.screenshotKey)))) {
       return json.errorResponse(res, 'The screenshot did not upload. Please try again.', 422);
     }
     await systemLog.record({

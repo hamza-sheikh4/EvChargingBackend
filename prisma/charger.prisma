@@ -26,7 +26,10 @@ model Charger {
   hours                 Json
   emergencyAvailability Boolean         @default(false) @map("emergency_availability")
   listed                Boolean         @default(true)
+  /// Set by the host switching "Listed now", taking time off or accepting a booking. Listings go stale without it (vision rule 7).
   lastCheckInAt         DateTime?       @map("last_check_in_at")
+  /// Time off: hidden from drivers until then, without switching "Listed now" off.
+  awayUntil             DateTime?       @map("away_until")
   verifiedAt            DateTime?       @map("verified_at")
   sessions              Session[]
   createdAt             DateTime        @default(now()) @map("created_at")

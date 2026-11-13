@@ -44,6 +44,8 @@ module.exports = (o, { UUID, actorFor, proofsOk }) => {
       });
       if (changed.count === 0) return json.errorResponse(res, 'This booking just changed. Pull to refresh.', 409);
       row = await prisma.session.findUnique({ where: { id: row.id } });
+      // Answering a request shows the host is around, so it counts as a check-in (vision rule 7).
+      if (to === 'accepted') await prisma.charger.update({ where: { id: row.chargerId }, data: { lastCheckInAt: new Date() } });
       await present.broadcast(row, kinds ? kinds(actor) : {});
       json.successResponse(res, { session: await present.toSession(row, actor) });
     } catch (e) {

@@ -1,0 +1,11 @@
+/// Sign-ups from the landing page's waitlist form. One row per email, in lower case.
+model WaitlistEntry {
+  id        String   @id @default(uuid()) @db.Uuid
+  email     String   @unique
+  /// When they agreed to be contacted: the moment they sent the form.
+  consentAt DateTime @map("consent_at")
+  source    String   @default("landing")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("waitlist")
+}

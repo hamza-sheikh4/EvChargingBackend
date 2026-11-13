@@ -9,7 +9,7 @@ let o = {}
 const PHOTO = 'profile_photo';
 
 /** A photo key is only accepted if it is this user's and the file was really uploaded. */
-const photoOk = async (key, userId) => storage.ownsKey(key, PHOTO, userId) && (await storage.exists(key));
+const photoOk = async (key, userId) => storage.ownsKey(key, PHOTO, userId) && (await storage.uploaded(key));
 
 const vehicleData = (vehicle) => ({
   category: vehicle.category,
