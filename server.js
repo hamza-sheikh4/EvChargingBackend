@@ -47,6 +47,8 @@ async function main() {
     // Health page: 30-day cleanup, landing-site uptime, and a log line for every start.
     require('./app/Jobs/Cleanup').start();
     require('./app/Jobs/Uptime').start();
+    // Calls our own health address so a free Render service stays awake and Supabase stays active.
+    require('./app/Jobs/KeepAlive').start();
     require('./app/Traits/SystemLog').event(`Server started (${process.env.NODE_ENV || 'development'})`);
   });
 
