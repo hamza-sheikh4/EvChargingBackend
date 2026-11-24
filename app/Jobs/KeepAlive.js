@@ -28,15 +28,22 @@ o.ping = async () => {
   if (!url) return null;
   try {
     const response = await fetch(url, { signal: AbortSignal.timeout(TIMEOUT_MS) });
+    // One line the first time it works, so the log shows the job is running; failures always print.
+    if (response.ok && !o.confirmed) console.log(`Keep-alive ping ok (${response.status}), repeating every 10 minutes.`);
+    else if (!response.ok) console.error(`Keep-alive ping returned ${response.status}`);
+    o.confirmed = response.ok;
     return response.status;
   } catch (e) {
     console.error('Keep-alive ping failed:', e.message);
+    o.confirmed = false;
     return 0;
   }
 };
 
 o.start = () => {
   if (!o.url()) return;
+  // First ping a minute after boot so the log confirms it quickly, then every 10 minutes.
+  setTimeout(() => o.ping(), 60 * 1000).unref();
   setInterval(() => o.ping(), EVERY_MS).unref();
 };
 
