@@ -6,9 +6,13 @@ enum HostVerificationStatus {
 
 model User {
   id                     String                  @id @default(uuid()) @db.Uuid
-  phone                  String                  @unique
+  /// Entered in onboarding and not verified, so it is not unique: nobody can claim another person's number.
+  phone                  String?
   fullName               String?                 @map("full_name")
-  email                  String?
+  email                  String?                 @unique
+  /// scrypt hash. Empty for an account that has not set a password.
+  passwordHash           String?                 @map("password_hash")
+  emailVerifiedAt        DateTime?               @map("email_verified_at")
   photoKey               String?                 @map("photo_key")
   isDriver               Boolean                 @default(false) @map("is_driver")
   isHost                 Boolean                 @default(false) @map("is_host")

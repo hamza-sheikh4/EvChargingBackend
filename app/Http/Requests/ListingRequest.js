@@ -1,6 +1,7 @@
 'use strict'
 
 const { z } = require('zod');
+const Phone = require('../../Traits/Phone');
 const { TIME_OFF_MAX_DAYS } = require('../../../config/constants');
 
 const time = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, { error: 'Use HH:MM times.' });
@@ -23,6 +24,7 @@ const awayUntil = z.iso.datetime().refine((value) => {
 exports.submit = z.object({
   fullName: z.string().trim().min(3, { error: 'Enter your full name.' }).max(100),
   cnic: z.string().regex(/^\d{13}$/, { error: 'Enter the 13-digit CNIC number.' }),
+  phone: z.string().regex(Phone.PATTERN, { error: 'Enter a 10-digit mobile number that starts with 3.' }),
   address: z.string().trim().min(10, { error: 'Enter your full address.' }).max(300),
   identity: z.object({ frontKey: key, backKey: key }),
   location: z.enum(['home', 'business']),

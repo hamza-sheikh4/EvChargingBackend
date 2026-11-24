@@ -46,8 +46,11 @@ app.group('/health', (Route) => {
 
 app.group('/auth', (Route) => {
 
-  Route.post('/otp/request', limits.auth, validate(authReq.requestOtp), authCtrl.requestOtp);
-  Route.post('/otp/verify',  limits.auth, validate(authReq.verifyOtp),  authCtrl.verifyOtp);
+  Route.post('/register',       limits.auth, validate(authReq.register),      limits.email, authCtrl.register);
+  Route.post('/login',          limits.auth, validate(authReq.login),         limits.email, authCtrl.login);
+  Route.post('/otp/send',       limits.auth, validate(authReq.sendOtp),       limits.email, authCtrl.sendOtp);
+  Route.post('/otp/verify',     limits.auth, validate(authReq.verifyOtp),     limits.email, authCtrl.verifyOtp);
+  Route.post('/password/reset', limits.auth, validate(authReq.resetPassword), authCtrl.resetPassword);
 
 });
 
@@ -56,6 +59,9 @@ app.group('/me', (Route) => {
   Route.get('/',         authCtrl.authenticate, userCtrl.me);
   Route.patch('/',       authCtrl.authenticate, validate(userReq.updateProfile), userCtrl.updateProfile);
   Route.put('/driver',   authCtrl.authenticate, validate(userReq.saveDriver), userCtrl.saveDriver);
+  Route.post('/password',       authCtrl.authenticate, limits.sensitive, validate(userReq.changePassword), userCtrl.changePassword);
+  Route.post('/sign-out-others', authCtrl.authenticate, limits.sensitive, userCtrl.signOutOthers);
+  Route.delete('/',             authCtrl.authenticate, limits.sensitive, validate(userReq.deleteAccount), userCtrl.deleteAccount);
   Route.post('/vehicles',       authCtrl.authenticate, validate(userReq.saveVehicle), userCtrl.addVehicle);
   Route.put('/vehicles/:id',    authCtrl.authenticate, validate(userReq.saveVehicle), userCtrl.updateVehicle);
   Route.delete('/vehicles/:id', authCtrl.authenticate, userCtrl.removeVehicle);

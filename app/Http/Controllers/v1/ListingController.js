@@ -46,6 +46,7 @@ o.submit = async (req, res, next) => {
         where: { id: user.id },
         data: {
           fullName: user.fullName || draft.fullName,
+          phone: draft.phone,
           cnicEncrypted: crypto.encrypt(draft.cnic),
           cnicFrontKey: draft.identity.frontKey,
           cnicBackKey: draft.identity.backKey,

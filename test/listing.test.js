@@ -11,6 +11,7 @@ const listingReq = require('../app/Http/Requests/ListingRequest');
 const day = { open: true, opensAt: '08:00', closesAt: '22:00' };
 const draft = {
   fullName: 'Kamran Ali',
+  phone: '3001234567',
   cnic: '3520112345671',
   address: 'House 14, Street 7, DHA Phase 5',
   identity: { frontKey: 'cnic_front/u/a.jpg', backKey: 'cnic_back/u/b.jpg' },
@@ -48,6 +49,7 @@ test('a complete listing is accepted', () => {
 
 test('a listing is refused with a bad CNIC, no connector, a price out of range or a bad time', () => {
   assert.ok(!listingReq.submit.safeParse({ ...draft, cnic: '35201-1234567-1' }).success);
+  assert.ok(!listingReq.submit.safeParse({ ...draft, phone: undefined }).success);
   assert.ok(!listingReq.submit.safeParse({ ...draft, connectors: [] }).success);
   assert.ok(!listingReq.submit.safeParse({ ...draft, ratePaisa: 500 }).success);
   assert.ok(!listingReq.submit.safeParse({ ...draft, hours: { ...draft.hours, mon: { ...day, opensAt: '25:00' } } }).success);

@@ -29,7 +29,7 @@ const FILTERS = {
 
 let o = {}
 
-const hostOf = (user) => ({ id: user.id, fullName: user.fullName ?? '', phone: user.phone, status: user.hostVerificationStatus });
+const hostOf = (user) => ({ id: user.id, fullName: user.fullName ?? '', phone: user.phone ?? '', status: user.hostVerificationStatus });
 
 const searchFor = (q) => {
   if (!q) return {};

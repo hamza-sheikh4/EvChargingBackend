@@ -18,7 +18,7 @@ const roles = (u) => [u.isDriver && 'driver', u.isHost && 'host'].filter(Boolean
 o.summary = (u) => ({
   id: u.id,
   fullName: u.fullName ?? '',
-  phone: u.phone,
+  phone: u.phone ?? '',
   email: u.email ?? null,
   roles: roles(u),
   hostStatus: u.hostVerificationStatus ?? null,

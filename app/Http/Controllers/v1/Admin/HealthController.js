@@ -98,7 +98,7 @@ o.event = async (req, res, next) => {
       message: e.message, stack: e.stack, context: e.context, device: e.device,
       resolvedAt: e.resolvedAt?.toISOString() ?? null, resolvedBy: e.resolvedBy,
       screenshotUrl: e.screenshotKey ? await storage.viewUrl(e.screenshotKey) : null,
-      reporter: reporter ? { fullName: reporter.fullName ?? '', phone: reporter.phone } : null,
+      reporter: reporter ? { fullName: reporter.fullName ?? '', phone: reporter.phone ?? '' } : null,
     });
   } catch (err) {
     next(err);
