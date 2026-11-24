@@ -3,6 +3,7 @@
 let json   = require('../../../Traits/ApiResponser');
 let prisma = require('../../../../config/database');
 let rules  = require('../../../Traits/SessionRules');
+let fresh  = require('../../../Traits/Freshness');
 
 /*
 |--------------------------------------------------------------------------
@@ -10,7 +11,7 @@ let rules  = require('../../../Traits/SessionRules');
 |--------------------------------------------------------------------------
 |
 | What drivers can find: verified, listed chargers whose host is not
-| suspended. Never the exact pin, the address or the instructions (vision
+| suspended, checked in lately and not on time off. Never the exact pin, the address or the instructions (vision
 | rule 2): only the approximate point and the area, until the host accepts.
 | The app works out "available now", distance and fit itself.
 |
@@ -56,6 +57,7 @@ o.search = async (req, res, next) => {
         listed: true,
         hostId: { not: req.user.id },
         host: { suspendedAt: null },
+        ...fresh.findable(),
         ...(areaId ? { areaId } : {}),
       },
       include: {

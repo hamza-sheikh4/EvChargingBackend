@@ -42,6 +42,8 @@ async function main() {
     console.log('Server Running on port ' + config.app.port);
     // Unanswered booking requests expire after 10 minutes.
     require('./app/Jobs/ExpireRequests').start();
+    // Hosts are told when their listing goes stale and drops out of search.
+    require('./app/Jobs/StaleListings').start();
     // Health page: 30-day cleanup, landing-site uptime, and a log line for every start.
     require('./app/Jobs/Cleanup').start();
     require('./app/Jobs/Uptime').start();

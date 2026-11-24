@@ -29,7 +29,7 @@ const formatCnic = (digits) => `${digits.slice(0, 5)}-${digits.slice(5, 12)}-${d
 o.summary = (host) => ({
   id: host.id,
   fullName: host.fullName ?? '',
-  phone: host.phone,
+  phone: host.phone ?? '',
   status: host.hostVerificationStatus,
   submittedAt: (host.hostOnboardedAt ?? host.updatedAt).toISOString(),
   areaId: host.chargers[0]?.areaId ?? null,
@@ -63,7 +63,7 @@ o.charger = charger;
 o.detail = async (host, history, { documents }) => ({
   id: host.id,
   fullName: host.fullName ?? '',
-  phone: host.phone,
+  phone: host.phone ?? '',
   email: host.email ?? null,
   photoUrl: await url(host.photoKey),
   memberSince: host.createdAt.toISOString(),

@@ -86,7 +86,7 @@ o.approve = async (req, res, next) => {
     if (host.hostVerificationStatus === 'verified') return json.errorResponse(res, 'This host is already verified.', 409);
     await prisma.$transaction(async (tx) => {
       await tx.user.update({ where: { id: host.id }, data: { hostVerificationStatus: 'verified' } });
-      await tx.charger.updateMany({ where: { hostId: host.id }, data: { verifiedAt: new Date() } });
+      await tx.charger.updateMany({ where: { hostId: host.id }, data: { verifiedAt: new Date(), lastCheckInAt: new Date() } });
       await audit.log(req, 'host.approve', 'user', host.id, { from: host.hostVerificationStatus }, tx);
     });
     await present.notify(host.id, 'verified');

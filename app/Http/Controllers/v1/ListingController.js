@@ -16,7 +16,7 @@ const findMine = (hostId) => prisma.charger.findFirst({ where: { hostId }, order
 const photosOk = async (userId, photos) => {
   const checks = photos
     .filter(([key]) => key)
-    .map(async ([key, kind]) => storage.ownsKey(key, kind, userId) && (await storage.exists(key)));
+    .map(async ([key, kind]) => storage.ownsKey(key, kind, userId) && (await storage.uploaded(key)));
   return (await Promise.all(checks)).every(Boolean);
 };
 
@@ -46,6 +46,7 @@ o.submit = async (req, res, next) => {
         where: { id: user.id },
         data: {
           fullName: user.fullName || draft.fullName,
+          phone: draft.phone,
           cnicEncrypted: crypto.encrypt(draft.cnic),
           cnicFrontKey: draft.identity.frontKey,
           cnicBackKey: draft.identity.backKey,
@@ -94,22 +95,27 @@ o.mine = async (req, res, next) => {
   }
 }
 
-/** Price, hours, area, pin, instructions or "Listed now". Switching "Listed now" counts as a check-in (vision rule 7). */
+/**
+ * Price, hours, area, pin, instructions, "Listed now" or time off. Switching "Listed now" or
+ * changing time off counts as a check-in (vision rule 7). awayUntil null ends time off.
+ */
 o.update = async (req, res, next) => {
   try {
     const charger = await findMine(req.user.id);
     if (!charger) return json.errorResponse(res, 'There is no listing to change yet.', 404);
-    const { coordinates, listed, ...rest } = req.body;
+    const { coordinates, listed, awayUntil, ...rest } = req.body;
     // A moved pin gets a new approximate point.
     let pin = {};
     if (coordinates) {
       const approx = geo.approximate(coordinates);
       pin = { ...coordinates, approxLatitude: approx.latitude, approxLongitude: approx.longitude };
     }
-    const updated = await prisma.charger.update({
-      where: { id: charger.id },
-      data: { ...rest, ...pin, ...(listed === undefined ? {} : { listed, lastCheckInAt: new Date() }) },
-    });
+    const presence = {
+      ...(listed === undefined ? {} : { listed }),
+      ...(awayUntil === undefined ? {} : { awayUntil: awayUntil === null ? null : new Date(awayUntil) }),
+    };
+    const checkIn = Object.keys(presence).length ? { lastCheckInAt: new Date() } : {};
+    const updated = await prisma.charger.update({ where: { id: charger.id }, data: { ...rest, ...pin, ...presence, ...checkIn } });
     json.successResponse(res, present.toResponse(updated, req.user, await present.reviewFor(req.user)));
   } catch (e) {
     next(e);

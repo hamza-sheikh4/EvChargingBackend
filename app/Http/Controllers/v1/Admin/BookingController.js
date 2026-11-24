@@ -29,7 +29,7 @@ const FILTERS = {
 
 let o = {}
 
-const person = (user) => ({ id: user.id, fullName: user.fullName ?? '', phone: user.phone });
+const person = (user) => ({ id: user.id, fullName: user.fullName ?? '', phone: user.phone ?? '' });
 
 const summary = (row) => ({
   id: row.id,

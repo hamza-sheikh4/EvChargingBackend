@@ -2,6 +2,7 @@
 
 const prisma = require('../../../../../config/database');
 const rules  = require('../../../../Traits/SessionRules');
+const fresh  = require('../../../../Traits/Freshness');
 
 /*
 |--------------------------------------------------------------------------
@@ -61,7 +62,7 @@ o.listings = async () => {
     prisma.charger.count({ where: { ...verified, listed: true } }),
     prisma.charger.count({ where: { ...verified, listed: false } }),
     prisma.charger.count({ where: { verifiedAt: null } }),
-    prisma.charger.count({ where: { ...verified, listed: true, OR: [{ lastCheckInAt: null }, { lastCheckInAt: { lt: ago(7) } }] } }),
+    prisma.charger.count({ where: { ...verified, listed: true, OR: [{ lastCheckInAt: null }, { lastCheckInAt: { lt: fresh.staleBefore() } }] } }),
     prisma.charger.count({ where: { ...verified, listed: true, emergencyAvailability: true } }),
     prisma.charger.groupBy({ by: ['areaId'], where: { ...verified, listed: true }, _count: true }),
     prisma.session.findMany({ where: { createdAt: { gte: ago(7) } }, select: { chargerSnapshot: true } }),

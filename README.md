@@ -12,6 +12,6 @@ npx prisma generate
 npm run dev
 ```
 
-Health check: `GET http://localhost:8000/api/v1/health`
+Health check: `GET http://localhost:8001/api/v1/health`
 
 See `AGENT.md` for structure, conventions and how to add a resource.

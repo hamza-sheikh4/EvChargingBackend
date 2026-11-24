@@ -11,9 +11,7 @@
 */
 
 const express   = require('express');
-const rateLimit = require('express-rate-limit');
-const metrics   = require('../app/Traits/Metrics');
-const systemLog = require('../app/Traits/SystemLog');
+const limits    = require('./limits');
 require('express-group-routes');
 
 /** Controllers **/
@@ -26,6 +24,7 @@ const chargerCtrl = require('../app/Http/Controllers/v1/ChargerController');
 const sessionCtrl = require('../app/Http/Controllers/v1/SessionController');
 const telemetryCtrl = require('../app/Http/Controllers/v1/TelemetryController');
 const notificationCtrl = require('../app/Http/Controllers/v1/NotificationController');
+const waitlistCtrl = require('../app/Http/Controllers/v1/WaitlistController');
 
 /** Validation **/
 const validate = require('../app/Http/Requests/Validate');
@@ -35,23 +34,9 @@ const uploadReq = require('../app/Http/Requests/UploadRequest');
 const listingReq = require('../app/Http/Requests/ListingRequest');
 const sessionReq = require('../app/Http/Requests/SessionRequest');
 const telemetryReq = require('../app/Http/Requests/TelemetryRequest');
+const waitlistReq = require('../app/Http/Requests/WaitlistRequest');
 
 const app = express.Router();
-
-// Per IP, on top of the per-number limits in AuthController.
-const authLimit = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  limit: 30,
-  standardHeaders: 'draft-8',
-  legacyHeaders: false,
-  message: { error: 'Too many attempts. Try again later.', code: 429 },
-  // Counted for the Health page, and logged once an hour per route as a security event.
-  handler: (req, res, next, options) => {
-    metrics.rateLimited();
-    systemLog.security(`Rate limit hit on ${req.method} ${req.baseUrl}${req.route?.path ?? req.path}`);
-    res.status(options.statusCode).json(options.message);
-  },
-});
 
 app.group('/health', (Route) => {
 
@@ -61,8 +46,11 @@ app.group('/health', (Route) => {
 
 app.group('/auth', (Route) => {
 
-  Route.post('/otp/request', authLimit, validate(authReq.requestOtp), authCtrl.requestOtp);
-  Route.post('/otp/verify',  authLimit, validate(authReq.verifyOtp),  authCtrl.verifyOtp);
+  Route.post('/register',       limits.auth, validate(authReq.register),      limits.email, authCtrl.register);
+  Route.post('/login',          limits.auth, validate(authReq.login),         limits.email, authCtrl.login);
+  Route.post('/otp/send',       limits.auth, validate(authReq.sendOtp),       limits.email, authCtrl.sendOtp);
+  Route.post('/otp/verify',     limits.auth, validate(authReq.verifyOtp),     limits.email, authCtrl.verifyOtp);
+  Route.post('/password/reset', limits.auth, validate(authReq.resetPassword), authCtrl.resetPassword);
 
 });
 
@@ -71,6 +59,9 @@ app.group('/me', (Route) => {
   Route.get('/',         authCtrl.authenticate, userCtrl.me);
   Route.patch('/',       authCtrl.authenticate, validate(userReq.updateProfile), userCtrl.updateProfile);
   Route.put('/driver',   authCtrl.authenticate, validate(userReq.saveDriver), userCtrl.saveDriver);
+  Route.post('/password',       authCtrl.authenticate, limits.sensitive, validate(userReq.changePassword), userCtrl.changePassword);
+  Route.post('/sign-out-others', authCtrl.authenticate, limits.sensitive, userCtrl.signOutOthers);
+  Route.delete('/',             authCtrl.authenticate, limits.sensitive, validate(userReq.deleteAccount), userCtrl.deleteAccount);
   Route.post('/vehicles',       authCtrl.authenticate, validate(userReq.saveVehicle), userCtrl.addVehicle);
   Route.put('/vehicles/:id',    authCtrl.authenticate, validate(userReq.saveVehicle), userCtrl.updateVehicle);
   Route.delete('/vehicles/:id', authCtrl.authenticate, userCtrl.removeVehicle);
@@ -85,7 +76,7 @@ app.group('/uploads', (Route) => {
 
 app.group('/listings', (Route) => {
 
-  Route.post('/',       authCtrl.authenticate, validate(listingReq.submit), listingCtrl.submit);
+  Route.post('/',       authCtrl.authenticate, limits.listing, validate(listingReq.submit), listingCtrl.submit);
   Route.get('/mine',    authCtrl.authenticate, listingCtrl.mine);
   Route.patch('/mine',  authCtrl.authenticate, validate(listingReq.update), listingCtrl.update);
 
@@ -93,7 +84,7 @@ app.group('/listings', (Route) => {
 
 app.group('/chargers', (Route) => {
 
-  Route.get('/', authCtrl.authenticate, chargerCtrl.search);
+  Route.get('/', authCtrl.authenticate, limits.search, chargerCtrl.search);
 
 });
 
@@ -119,28 +110,26 @@ app.group('/notifications', (Route) => {
 
 });
 
-// Per IP. Telemetry needs no login, so it gets its own, stricter limit.
-const telemetryLimit = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  limit: 120,
-  standardHeaders: 'draft-8',
-  legacyHeaders: false,
-  message: { error: 'Too many reports. Try again later.', code: 429 },
-});
-
 app.group('/telemetry', (Route) => {
 
-  Route.post('/errors', telemetryLimit, validate(telemetryReq.error), telemetryCtrl.error);
-  Route.post('/ping',   telemetryLimit, validate(telemetryReq.ping),  telemetryCtrl.ping);
+  Route.post('/errors', limits.telemetry, validate(telemetryReq.error), telemetryCtrl.error);
+  Route.post('/ping',   limits.telemetry, validate(telemetryReq.ping),  telemetryCtrl.ping);
 
 });
 
 app.group('/support', (Route) => {
 
-  Route.post('/bug-report', telemetryLimit, authCtrl.authenticate, validate(telemetryReq.bugReport), telemetryCtrl.bugReport);
+  Route.post('/bug-report', limits.telemetry, authCtrl.authenticate, validate(telemetryReq.bugReport), telemetryCtrl.bugReport);
 
 });
 
-require('./admin')(app, { authLimit, validate });
+// The landing page's waitlist form. No login.
+app.group('/waitlist', (Route) => {
+
+  Route.post('/', limits.waitlist, validate(waitlistReq.join), waitlistCtrl.join);
+
+});
+
+require('./admin')(app, { authLimit: limits.auth, validate });
 
 module.exports = app;

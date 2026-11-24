@@ -2,6 +2,7 @@
 
 let json    = require('../../../Traits/ApiResponser');
 let rules   = require('../../../Traits/SessionRules');
+let fresh   = require('../../../Traits/Freshness');
 let storage = require('../../../Traits/Storage');
 let prisma  = require('../../../../config/database');
 let present = require('./SessionPresenter');
@@ -48,7 +49,8 @@ o.list = async (req, res, next) => {
 o.request = async (req, res, next) => {
   try {
     const charger = await prisma.charger.findUnique({ where: { id: req.body.chargerId }, include: { host: true } });
-    if (!charger || !charger.verifiedAt || !charger.listed || charger.host.suspendedAt) {
+    const hidden = !charger || fresh.isStale(charger) || fresh.isAway(charger);
+    if (hidden || !charger.verifiedAt || !charger.listed || charger.host.suspendedAt) {
       return json.errorResponse(res, 'That charger is not available right now.', 409);
     }
     if (charger.hostId === req.user.id) return json.errorResponse(res, 'You cannot book your own charger.', 409);
@@ -104,7 +106,7 @@ o.access = async (req, res, next) => {
 
 /** Checks the driver's end photos are their own uploads. */
 const proofsOk = async (userId, keys) =>
-  (await Promise.all(Object.values(keys).filter(Boolean).map(async (key) => storage.ownsKey(key, 'session_proof', userId) && storage.exists(key))))
+  (await Promise.all(Object.values(keys).filter(Boolean).map(async (key) => storage.ownsKey(key, 'session_proof', userId) && storage.uploaded(key))))
     .every(Boolean);
 
 require('./SessionMoves')(o, { UUID, actorFor, proofsOk });

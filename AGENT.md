@@ -174,5 +174,5 @@ npx prisma generate        # generate the Prisma client
 npm run dev                # restarts on file changes
 ```
 
-Check it works: `GET http://localhost:8000/api/v1/health` returns
+Check it works: `GET http://localhost:8001/api/v1/health` returns
 `{ "data": { "status": "ok", "database": "connected" } }`.

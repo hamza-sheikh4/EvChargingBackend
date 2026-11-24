@@ -83,12 +83,11 @@ const version = (name) => {
   }
 };
 
-const SECRETS = ['JWT_SECRET', 'OTP_SECRET', 'ADMIN_JWT_SECRET', 'DATABASE_URL', 'R2_ENDPOINT', 'R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY', 'R2_BUCKET', 'CNIC_ENCRYPTION_KEY'];
+const SECRETS = ['JWT_SECRET', 'OTP_SECRET', 'ADMIN_JWT_SECRET', 'DATABASE_URL', 'R2_ENDPOINT', 'R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY', 'R2_BUCKET', 'CNIC_ENCRYPTION_KEY', 'SMTP_USER', 'SMTP_PASS'];
 
 /** Versions, addresses, config checks and which secrets are set. Never a secret's value. */
 o.environment = () => {
   const production = process.env.NODE_ENV === 'production';
-  const otpDevMode = process.env.OTP_DEV_MODE === 'true';
   const pkg = require('../../../../../package.json');
   return {
     name: process.env.NODE_ENV || 'development',
@@ -98,7 +97,6 @@ o.environment = () => {
     platform: `${process.platform} ${process.arch}`,
     addresses: { apiPort: process.env.PORT || null, admin: process.env.APP_URL || null, landing: process.env.LANDING_URL || null },
     checks: [
-      { id: 'otp_dev_mode', ok: !otpDevMode || !production, value: otpDevMode ? 'On' : 'Off', warn: otpDevMode },
       // Off is expected in development, where the admin site runs on plain http.
       { id: 'secure_cookie', ok: true, value: production ? 'On' : 'Off (development)' },
       { id: 'cors', ok: Boolean(process.env.APP_URL), value: [process.env.APP_URL, process.env.LANDING_URL].filter(Boolean).join(', ') || 'Not set' },

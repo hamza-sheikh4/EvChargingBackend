@@ -1,9 +1,10 @@
 'use strict'
 
 const crypto = require('crypto');
-const { S3Client, PutObjectCommand, GetObjectCommand, HeadObjectCommand } = require('@aws-sdk/client-s3');
+const { S3Client, PutObjectCommand, GetObjectCommand, HeadObjectCommand, DeleteObjectsCommand } = require('@aws-sdk/client-s3');
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 const storage = require('../../config/storage');
+const { IMAGE_SIZE } = require('../../config/constants');
 
 const UPLOAD_SECONDS = 300;
 const VIEW_SECONDS = 3600;
@@ -32,11 +33,31 @@ o.uploadUrl = (key) =>
 /** A link to view a private file for an hour, for the app to show it. */
 o.viewUrl = (key) => getSignedUrl(client, new GetObjectCommand({ Bucket: storage.bucket, Key: key }), { expiresIn: VIEW_SECONDS });
 
+/** Removes files for good, such as the CNIC photos of a deleted account. Missing keys are ignored. */
+o.remove = async (keys) => {
+  const list = keys.filter(Boolean);
+  if (!list.length) return;
+  await client.send(new DeleteObjectsCommand({ Bucket: storage.bucket, Delete: { Objects: list.map((Key) => ({ Key })), Quiet: true } }));
+};
+
 /** True once the file has actually been uploaded. */
 o.exists = async (key) => {
   try {
     await client.send(new HeadObjectCommand({ Bucket: storage.bucket, Key: key }));
     return true;
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * True once the file is uploaded and no bigger than IMAGE_SIZE. A signed link cannot cap the size,
+ * so it is checked here, before a key is saved. A file over the limit is refused like a missing one.
+ */
+o.uploaded = async (key) => {
+  try {
+    const head = await client.send(new HeadObjectCommand({ Bucket: storage.bucket, Key: key }));
+    return (head.ContentLength ?? 0) <= IMAGE_SIZE;
   } catch {
     return false;
   }

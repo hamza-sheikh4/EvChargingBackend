@@ -5,8 +5,10 @@
 | Auth
 |--------------------------------------------------------------------------
 |
-| Login is a phone OTP. In dev mode no SMS is sent and any code except 0000
-| logs in. Dev mode can never run in production: the server refuses to start.
+| Sign-up and sign-in use an email and password, or a 6-digit code sent to
+| the email. Codes go out through Gmail SMTP (an App Password). Without
+| SMTP_USER, a code is printed to the server console in development only;
+| production refuses to start.
 |
 */
 
@@ -16,21 +18,25 @@ function required(name) {
   return value;
 }
 
-const devMode = process.env.OTP_DEV_MODE === 'true';
-
-if (devMode && process.env.NODE_ENV === 'production') {
-  throw new Error('OTP_DEV_MODE must be false in production.');
-}
+const production = process.env.NODE_ENV === 'production';
+if (production) { required('SMTP_USER'); required('SMTP_PASS'); }
 
 module.exports = {
   jwtSecret    : required('JWT_SECRET'),
   jwtExpiresIn : process.env.JWT_EXPIRES_IN || '30d',
   otpSecret    : required('OTP_SECRET'),
-  otpDevMode   : devMode,
-  otpDigits    : 4,
-  otpTtlMinutes: 5,
+  otpDigits    : 6,
+  otpTtlMinutes: 10,
   otpMaxAttempts: 5,
-  otpResendSeconds: 30,
+  otpResendSeconds: 60,
   otpMaxPerHour: 5,
-  otpRejectedDevCode: '0000',
+  resetMinutes : 10,
+  passwordMin  : 8,
+  passwordMax  : 128,
+  production,
+  smtp: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+    from: process.env.MAIL_FROM || `PakVolt <${process.env.SMTP_USER}>`,
+  },
 };
